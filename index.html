@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>모마드라이프 - 쪼막노트 MVP (v0.0.03)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-color: #f7f6f2; /* 종이결 아날로그 아이보리 감성 */
+            --card-bg: #ffffff;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --accent-color: #1b4332;
+            --border-color: #e5e7eb;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #121212; color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+
+        /* 모바일 프레임 (폭 430px 고정) */
+        .mobile-frame {
+            width: 100%;
+            max-width: 430px;
+            height: 100vh;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-y: auto;
+            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            padding-bottom: 75px;
+        }
+
+        /* 상단 탑바 */
+        .top-bar {
+            padding: 14px 20px 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card-bg);
+        }
+        .menu-icon { font-size: 1.4rem; cursor: pointer; color: var(--text-main); }
+        .brand-logo-text { font-weight: 900; font-size: 1.2rem; color: var(--accent-color); letter-spacing: -0.5px; text-align: center; }
+        .spec-badge { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; background: #f3f4f6; padding: 3px 8px; border-radius: 6px; }
+
+        /* 상단 GNB 5대 메뉴 (홈, 모마드라이프, 세계관, 쪼막집?, 시공현장) */
+        .top-gnb-bar {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px 8px;
+        }
+        .gnb-item {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-weight: 700;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .gnb-item.active, .gnb-item:hover {
+            color: var(--accent-color);
+            background-color: #f0fdf4;
+            font-weight: 900;
+        }
+
+        /* 뷰 컨테이너 */
+        .view-section { display: none; flex-direction: column; gap: 14px; padding: 16px; }
+        .view-section.active { display: flex; }
+
+        .moma-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .card-tag { font-size: 0.75rem; color: var(--accent-color); font-weight: 800; margin-bottom: 6px; }
+        .card-title { font-size: 1.1rem; font-weight: 900; color: var(--text-main); margin-bottom: 6px; line-height: 1.35; }
+        .card-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.45; font-weight: 600; }
+
+        /* 하단 플로팅 네비게이션바 (홈, 쪼막노트, (+), 커뮤니티, 내 모라) */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 70px;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 10px;
+            z-index: 100;
+        }
+        .nav-item { font-size: 0.78rem; color: var(--text-muted); cursor: pointer; font-weight: 700; padding: 6px; text-align: center; }
+        .nav-item.active { color: var(--accent-color); font-weight: 900; }
+        
+        .nav-center-btn {
+            width: 44px; height: 44px;
+            background: var(--accent-color);
+            color: white;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem;
+            box-shadow: 0 4px 10px rgba(27, 67, 50, 0.3);
+            margin-top: -15px;
+            cursor: pointer;
+            font-weight: 900;
+        }
+
+        /* 넷플릭스식 강제 90도 회전 쪼막 노트 캔버스 뷰 (다이렉트 직결) */
+        #zomak-note-canvas-view {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background-color: #121212;
+            z-index: 99999;
+            flex-direction: column;
+            color: #ffffff;
+            padding: 16px;
+            transform: rotate(90deg);
+            transform-origin: center center;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-frame">
+        <!-- 상단 탑바 -->
+        <div class="top-bar">
+            <div class="menu-icon" onclick="alert('시스템 메뉴')">☰</div>
+            <div class="brand-logo-text">모마드라이프</div>
+            <div class="spec-badge">v0.0.03</div>
+        </div>
+
+        <!-- 상단 GNB 5대 메뉴바 -->
+        <div class="top-gnb-bar">
+            <div class="gnb-item active" onclick="switchTab('home')">홈</div>
+            <div class="gnb-item" onclick="switchTab('momad')">모마드라이프</div>
+            <div class="gnb-item" onclick="switchTab('world')">세계관</div>
+            <div class="gnb-item" onclick="switchTab('zomak')">쪼막집?</div>
+            <div class="gnb-item" onclick="switchTab('site')">시공현장</div>
+        </div>
+
+        <!-- [TAB 1] 홈 화면 (실시간 롤링 전광판 포함) -->
+        <div id="view-home" class="view-section active">
+            <div class="moma-card">
+                <div class="card-tag">전국 모마드 생태계 누적 공유 시간</div>
+                <div class="card-title" id="rolling-counter" style="font-size: 1.8rem; color: var(--accent-color); text-align: center; margin: 6px 0;">12,816 MOLA</div>
+                <div class="card-desc" style="text-align: center;">우리는 집을 소유하지 않고, 시간을 입출금합니다.</div>
+            </div>
+
+            <div class="moma-card">
+                <div class="card-tag">모마드라이프 공식 영상</div>
+                <div class="card-title">"모마드의 쪼막집 시공 브이로그"</div>
+                <div style="width: 100%; height: 160px; background: #1a1a1a; border-radius: 8px; margin-top: 8px; display: flex; align-items: center; justify-content: center; color: #888; font-size: 0.85rem; font-weight: 700;">
+                    [ 유튜브 임베디드 영역 ]
+                </div>
+            </div>
+        </div>
+
+        <!-- [TAB 2] 모마드라이프 소개 -->
+        <div id="view-momad" class="view-section">
+            <div class="moma-card">
+                <div class="card-tag">브랜드 철학</div>
+                <div class="card-title">미니멀(Minimal) + 노마드(Nomad)</div>
+                <div class="card-desc">월세와 대출의 굴레에서 벗어나, 1.8평 쪼막집과 머무는 시간(MOLA)으로 삶의 자유를 되찾는 자생적 노마드 생태계입니다.</div>
+            </div>
+        </div>
+
+        <!-- [TAB 3] 세계관 -->
+        <div id="view-world" class="view-section">
+            <div class="moma-card">
+                <div class="card-tag">미래 비전 & 시간 화폐</div>
+                <div class="card-title">전국 쪼막집 네트워크와 '모아(MOLA)'</div>
+                <div class="card-desc">1시간 = 1 MOLA 시간 화폐를 통해 새로운 교환 경제의 신세계가 펼쳐집니다.</div>
+            </div>
+        </div>
+
+        <!-- [TAB 4] 쪼막집? 모델 스펙 -->
+        <div id="view-zomak" class="view-section">
+            <div class="moma-card">
+                <div class="card-tag">쪼막집 바닥 평수 모델 가이드</div>
+                <div class="card-title">Z1 (2m × 3m = 약 1.8평) 외 4대 모델</div>
+                <div class="card-desc">화장실 포함 풀옵션 및 자연식 화장실/작업실 전용 모델 비교 안내.</div>
+            </div>
+        </div>
+
+        <!-- [TAB 5] 시공현장 아카이브 -->
+        <div id="view-site" class="view-section">
+            <div class="moma-card">
+                <div class="card-tag">실전 건축 노하우</div>
+                <div class="card-title">머드와 톱밥, Upcycled 시공 현장</div>
+                <div class="card-desc">합성 단열재 대신 전통 머드와 톱밥을 활용한 친환경 건축 과정 공유.</div>
+            </div>
+        </div>
+
+        <!-- 하단 플로팅 네비게이션바 (홈, 쪼막노트, (+), 커뮤니티, 내 모라) -->
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="switchTab('home')">홈</div>
+            <div class="nav-item" onclick="openZomakNoteCanvas()" style="font-weight: 900; color: var(--accent-color);">쪼막노트</div>
+            <div class="nav-center-btn" onclick="alert('포스팅 작성 팝업')">+</div>
+            <div class="nav-item" onclick="alert('커뮤니티 전체 피드 및 댓글 기능')">커뮤니티</div>
+            <div class="nav-item" onclick="alert('내 모라(잔고, 통장 내역, 설계 리스트)')">내 모라</div>
+        </div>
+
+        <!-- [넷플릭스식 강제 90도 회전 쪼막 노트 툴 Canvas] -->
+        <div id="zomak-note-canvas-view">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 6px;">
+                <div style="font-weight: 900; font-size: 0.95rem; color: #34d399;">📝 쪼막노트 설계 툴 (Z1 기본 2m × 3m 평면도 & 가구 배치)</div>
+                <button onclick="closeZomakNoteCanvas()" style="padding: 4px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 900;">닫기 ✕</button>
+            </div>
+            
+            <!-- 상단 가구 모듈 팔레트 -->
+            <div style="display: flex; gap: 8px; padding: 6px; background: #1e1e1e; border-radius: 6px; align-items: center;">
+                <span style="font-size: 0.8rem; color: #9ca3af; font-weight: 700;">모듈 팔레트:</span>
+                <div style="background: #2a2a2a; border: 1px solid #4b5563; padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; color: #fff; font-weight: 700;">🚰 싱크대</div>
+                <div style="background: #2a2a2a; border: 1px solid #4b5563; padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; color: #fff; font-weight: 700;">🔥 구들 난방</div>
+                <div style="background: #2a2a2a; border: 1px solid #4b5563; padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; color: #fff; font-weight: 700;">🛏️ 침실 존</div>
+            </div>
+
+            <!-- 정중앙 가로 확장형 2m x 3m Z1 그리드 평면도 캔버스 -->
+            <div style="flex: 1; background: #1a1a1a; border: 2px solid #374151; border-radius: 8px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 8px; padding: 10px; margin: 6px 0;">
+                <div style="background: #111827; border: 1px dashed #4b5563; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 0.85rem; font-weight: 800;">Zone 1 (Sink)</div>
+                <div style="background: #111827; border: 1px dashed #4b5563; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 0.85rem; font-weight: 800;">Zone 2 (Bed)</div>
+                <div style="background: #111827; border: 1px dashed #4b5563; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 0.85rem; font-weight: 800;">Zone 3 (Gudeul)</div>
+                <div style="background: #111827; border: 1px dashed #4b5563; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 0.85rem; font-weight: 800;">Zone 4</div>
+                <div style="background: #111827; border: 1px dashed #4b5563; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 0.85rem; font-weight: 800;">Zone 5</div>
+                <div style="background: #111827; border: 1px dashed #4b5563; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 0.85rem; font-weight: 800;">Zone 6</div>
+            </div>
+
+            <!-- 하단 툴 상태 바 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #9ca3af; padding: 2px 4px; font-weight: 700;">
+                <span>기본 디폴트: Z1 모델 (2m × 3m = 약 1.8평)</span>
+                <span>모듈 드래그 앤 드롭 대기 중</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            if (tabId === 'home') document.getElementById('view-home').classList.add('active');
+            if (tabId === 'momad') document.getElementById('view-momad').classList.add('active');
+            if (tabId === 'world') document.getElementById('view-world').classList.add('active');
+            if (tabId === 'zomak') document.getElementById('view-zomak').classList.add('active');
+            if (tabId === 'site') document.getElementById('view-site').classList.add('active');
+        }
+
+        /* 하단 쪼막노트 누르는 즉시 넷플릭스식 90도 회전 및 Z1 평면도 직결 발동 */
+        function openZomakNoteCanvas() {
+            document.getElementById('zomak-note-canvas-view').style.display = 'flex';
+        }
+
+        function closeZomakNoteCanvas() {
+            document.getElementById('zomak-note-canvas-view').style.display = 'none';
+        }
+
+        /* 실시간 롤링 전광판 엔진 */
+        let baseMola = 12816;
+        setInterval(() => {
+            baseMola += Math.floor(Math.random() * 3) + 1;
+            const counter = document.getElementById('rolling-counter');
+            if(counter) { counter.innerText = baseMola.toLocaleString() + " MOLA"; }
+        }, 3000);
+    </script>
+</body>
+</html>
