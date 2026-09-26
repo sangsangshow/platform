@@ -1,1 +1,881 @@
+<!-- [회장승인] 상상쇼 웹 코드 0.3.05 (수익표 2개 핀셋 패치 완료) -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>상상쇼 - ssangsangshow.com</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    html, body {
+      width: 100%; min-height: 100vh;
+      background-color: #f0f4f9;
+      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
 
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    
+    .universe-shell {
+      width: 430px; min-height: 100vh;
+      background-color: #ffffff;
+      margin: 0 auto;
+      padding: 8px 12px 110px 12px;
+      display: flex; flex-direction: column;
+      position: relative;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .universe-header {
+      height: 52px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      text-align: center;
+      position: relative;
+      box-sizing: border-box;
+      padding-top: 6px;
+      margin-bottom: 5px;
+    }
+    .universe-slogan { font-size: 10px; font-weight: 500; color: #64748b; line-height: 1; margin-bottom: 3px; display: block; }
+    .universe-logo { font-size: 22px; font-weight: 900; color: #0f172a; line-height: 1; margin-bottom: 2px; cursor: pointer; display: inline-block; }
+    .universe-version { font-size: 10px; font-weight: 700; color: #7e22ce; line-height: 1; letter-spacing: 0.05em; display: block; }
+
+    .universe-gnb-wrapper {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 2px;
+    }
+    .universe-gnb {
+      width: 100%;
+      max-width: 390px;
+      background-color: #ffffff;
+      padding: 5px 16px;
+      border-radius: 12px;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-evenly;
+      box-sizing: border-box;
+      border: 1px solid #f1f5f9;
+    }
+    .universe-gnb button { font-size: 14px !important; font-weight: 900 !important; }
+  </style>
+</head>
+<body class="text-slate-900 w-full min-h-screen flex justify-center items-start p-0">
+  
+  <div class="universe-shell">
+    
+    <!-- 좌측 상단 비밀문 핫스팟 -->
+    <div 
+      onclick="
+        if (localStorage.getItem('isChairmanLoggedIn') === 'true') {
+          state.isSecret = !state.isSecret;
+          state.secretSite = 'CEO';
+          render();
+        } else {
+          AuthModule.open();
+        }
+      "
+      style="position: absolute; top: 0; left: 0; width: 60px; height: 60px; z-index: 999; cursor: pointer;"
+      title="Secret Admin Gate"
+    ></div>
+
+    <!-- 독립 렌더링 컨테이너 -->
+    <div id="independent-app" class="w-full flex-1 flex flex-col space-y-1"></div>
+
+    <!-- 로그인 모달 -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 hidden">
+      <div style="width: 310px;" class="bg-white rounded-2xl p-5 space-y-3.5 shadow-2xl border border-slate-200">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="text-sm font-black text-slate-900">회원가입 / 로그인</h3>
+          <button onclick="AuthModule.close()" class="text-slate-400 font-bold text-sm px-1 cursor-pointer">✕</button>
+        </div>
+        <form onsubmit="AuthModule.handleLogin(event)" class="space-y-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1 text-left">아이디</label>
+            <input id="login-id" type="text" placeholder="아이디 입력" class="w-full bg-slate-50 border border-slate-300 px-3 py-2.5 rounded-xl text-xs font-medium focus:outline-none text-left" required />
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1 text-left">비밀번호 (패스코드)</label>
+            <input id="login-pw" type="password" placeholder="비밀번호 입력" class="w-full bg-slate-50 border border-slate-300 px-3 py-2.5 rounded-xl text-xs font-medium focus:outline-none text-left" required />
+          </div>
+          <div class="flex items-center gap-2 pt-0.5">
+            <input id="keep-login" type="checkbox" class="w-4 h-4 text-purple-700 rounded border-slate-300 cursor-pointer" checked />
+            <label for="keep-login" class="text-[11px] font-bold text-slate-700 cursor-pointer">회원가입 및 로그인 유지</label>
+          </div>
+          <button type="submit" class="w-full py-2.5 bg-slate-900 text-white text-xs font-bold rounded-xl shadow mt-1 cursor-pointer">확인 및 입장</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ⚡ 퀵 작성 센터 모달 -->
+    <div id="quick-modal" class="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4 hidden">
+      <div id="quick-modal-content" style="width: 340px;" class="bg-white rounded-3xl p-5 space-y-3.5 shadow-2xl border border-slate-200 text-left relative">
+        <!-- JS 동적 렌더링 -->
+      </div>
+    </div>
+
+    <!-- 하단메뉴 절대 고정 락 -->
+    <nav id="bottom-nav-bar" style="position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 430px; z-index: 9999; background-color: rgba(255,255,255,0.98); backdrop-filter: blur(8px); padding: 8px 12px 14px 12px; border-top: 1px solid #cbd5e1; box-shadow: 0 -10px 25px -5px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-around; box-sizing: border-box;"></nav>
+
+  </div>
+
+  <script>
+    const AuthModule = {
+      open() { document.getElementById('auth-modal').classList.remove('hidden'); },
+      close() { document.getElementById('auth-modal').classList.add('hidden'); },
+      handleLogin(e) {
+        e.preventDefault();
+        let idVal = document.getElementById('login-id').value.trim();
+        let pwVal = document.getElementById('login-pw').value.trim();
+        let keepLogin = document.getElementById('keep-login').checked;
+        if (idVal && pwVal) {
+          localStorage.setItem('ss_login_id', idVal);
+          if (keepLogin) {
+            localStorage.setItem('isChairmanLoggedIn', 'true');
+          }
+        }
+        state.isSecret = true;
+        state.secretSite = 'GROUP';
+        state.groupTab = 'dreamteam';
+        this.close();
+        render();
+      },
+      logout() {
+        localStorage.removeItem('isChairmanLoggedIn');
+        localStorage.removeItem('ss_login_id');
+        alert('로그아웃 되었습니다.');
+        QuickModal.close();
+        state.isSecret = false;
+        render();
+      }
+    };
+
+    const QuickModal = {
+      step: 'main',
+      txType: 'expense',
+      noteCategory: '기획',
+      open() {
+        this.step = 'main';
+        document.getElementById('quick-modal').classList.remove('hidden');
+        this.renderModal();
+      },
+      close() { document.getElementById('quick-modal').classList.add('hidden'); },
+      setStep(s) { this.step = s; this.renderModal(); },
+      setTxType(t) { this.txType = t; this.renderModal(); },
+      setCategory(c) { this.noteCategory = c; this.renderModal(); },
+      saveLedger() {
+        let desc = document.getElementById('quick-desc').value.trim();
+        let amount = parseInt(document.getElementById('quick-amount').value.replace(/[^0-9]/g, '')) || 0;
+        let day = document.getElementById('quick-day').value;
+        if (!desc || !amount) {
+          alert('적요와 금액을 올바르게 입력해주세요.');
+          return;
+        }
+        let inc = this.txType === 'income' ? amount : 0;
+        let exp = this.txType === 'expense' ? amount : 0;
+        let dayStr = `${String(state.currentMonth).padStart(2,'0')}.${String(day).padStart(2,'0')}`;
+        
+        state.ledgerItems.push({ date: dayStr, desc: desc, income: inc, expense: exp });
+        alert('💰 금전출납부에 내역이 정상 반영되었습니다!');
+        this.close();
+        render();
+      },
+      saveNote() {
+        let title = document.getElementById('quick-note-title').value.trim();
+        let desc = document.getElementById('quick-note-desc').value.trim();
+        if (!title) {
+          alert('노트 제목을 입력해주세요.');
+          return;
+        }
+        state.notes.unshift({ 
+          title: `[${this.noteCategory}] ${title}`, 
+          desc: desc || '내용 없음', 
+          date: `${String(state.currentMonth).padStart(2,'0')}.26` 
+        });
+        alert(`📝 상상노트 [${this.noteCategory}]에 새 글이 등록되었습니다!`);
+        this.close();
+        render();
+      },
+      renderModal() {
+        let container = document.getElementById('quick-modal-content');
+        let loginId = localStorage.getItem('ss_login_id') || 'khpshow';
+
+        if (this.step === 'main') {
+          container.innerHTML = `
+            <div class="flex justify-between items-center border-b pb-2">
+              <h3 class="text-sm font-black text-slate-900 flex items-center gap-1">
+                <span>⚡</span> 회장 전용 퀵 작성 센터
+              </h3>
+              <button onclick="QuickModal.close()" class="text-slate-400 font-bold text-sm px-1 cursor-pointer">✕</button>
+            </div>
+            <div class="space-y-2.5 pt-1">
+              <button onclick="QuickModal.setStep('note')" class="w-full py-3.5 bg-purple-700 text-white text-xs font-black rounded-2xl shadow flex items-center justify-center gap-2 cursor-pointer hover:bg-purple-800 transition-all">
+                <span>📝</span> 상상노트 글상자 작성하기
+              </button>
+              <button onclick="QuickModal.setStep('ledger')" class="w-full py-3.5 bg-slate-900 text-white text-xs font-black rounded-2xl shadow flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-800 transition-all">
+                <span>💰</span> 금전출납부 수입/지출 기입
+              </button>
+            </div>
+            <div class="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-2.5 flex items-center justify-between text-xs mt-2">
+              <div class="flex items-center gap-1.5 text-emerald-800 font-bold">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                <span>로그인 유지 중 (${loginId})</span>
+              </div>
+              <button onclick="AuthModule.logout()" class="text-[11px] font-bold text-slate-700 bg-white border border-slate-300 px-2.5 py-1 rounded-xl shadow-sm cursor-pointer">로그아웃</button>
+            </div>
+          `;
+        } else if (this.step === 'ledger') {
+          let incActive = this.txType === 'income' ? 'bg-purple-700 text-white shadow' : 'bg-slate-50 text-slate-700 border border-slate-200';
+          let expActive = this.txType === 'expense' ? 'bg-purple-700 text-white shadow' : 'bg-slate-50 text-slate-700 border border-slate-200';
+          
+          container.innerHTML = `
+            <div class="flex justify-between items-center border-b pb-2">
+              <h3 class="text-sm font-black text-slate-900 flex items-center gap-1">
+                <span>⚡</span> 회장 전용 퀵 작성 센터
+              </h3>
+              <button onclick="QuickModal.close()" class="text-slate-400 font-bold text-sm px-1 cursor-pointer">✕</button>
+            </div>
+            <div class="space-y-2.5 text-xs">
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 mb-1">연도</label>
+                  <select class="w-full bg-slate-50 border border-slate-300 p-2 rounded-xl font-bold text-xs">
+                    <option>2026</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 mb-1">월</label>
+                  <select class="w-full bg-slate-50 border border-slate-300 p-2 rounded-xl font-bold text-xs">
+                    <option>${state.currentMonth}월</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 mb-1">일</label>
+                  <input id="quick-day" type="number" min="1" max="31" value="26" class="w-full bg-slate-50 border border-slate-300 p-2 rounded-xl font-bold text-xs text-center" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button onclick="QuickModal.setTxType('income')" class="py-2.5 rounded-xl font-black transition-all cursor-pointer ${incActive}">+ 수입</button>
+                <button onclick="QuickModal.setTxType('expense')" class="py-2.5 rounded-xl font-black transition-all cursor-pointer ${expActive}">- 지출</button>
+              </div>
+
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">적요</label>
+                <input id="quick-desc" type="text" placeholder="예: 참모진 식사 비용" class="w-full bg-slate-50 border border-slate-300 px-3 py-2.5 rounded-xl font-medium focus:outline-none" />
+              </div>
+
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">금액</label>
+                <input id="quick-amount" type="text" placeholder="숫자만 입력 (예: 50000)" class="w-full bg-slate-50 border border-slate-300 px-3 py-2.5 rounded-xl font-medium focus:outline-none" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button onclick="QuickModal.saveLedger()" class="py-3 bg-purple-700 text-white font-black rounded-xl shadow cursor-pointer">금전출납부 기입</button>
+                <button onclick="QuickModal.setStep('main')" class="py-3 bg-slate-100 text-slate-700 border border-slate-300 font-bold rounded-xl cursor-pointer">돌아가기</button>
+              </div>
+            </div>
+            <div class="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-2.5 flex items-center justify-between text-xs mt-1">
+              <div class="flex items-center gap-1.5 text-emerald-800 font-bold">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                <span>로그인 유지 중 (${loginId})</span>
+              </div>
+              <button onclick="AuthModule.logout()" class="text-[11px] font-bold text-slate-700 bg-white border border-slate-300 px-2.5 py-1 rounded-xl shadow-sm cursor-pointer">로그아웃</button>
+            </div>
+          `;
+        } else if (this.step === 'note') {
+          let cats = ['과제', '성과', '기획', '아이디어', '메모'];
+          container.innerHTML = `
+            <div class="flex justify-between items-center border-b pb-2">
+              <h3 class="text-sm font-black text-slate-900 flex items-center gap-1">
+                <span>⚡</span> 상상노트 글쓰기
+              </h3>
+              <button onclick="QuickModal.close()" class="text-slate-400 font-bold text-sm px-1 cursor-pointer">✕</button>
+            </div>
+            <div class="space-y-2.5 text-xs">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">카테고리 선택</label>
+                <div class="grid grid-cols-5 gap-1">
+                  ${cats.map(c => `
+                    <button onclick="QuickModal.setCategory('${c}')" class="py-2 rounded-xl font-black text-[11px] cursor-pointer ${this.noteCategory === c ? 'bg-purple-700 text-white shadow' : 'bg-slate-50 text-slate-700 border border-slate-200'}">${c}</button>
+                  `).join('')}
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">제목</label>
+                <input id="quick-note-title" type="text" placeholder="예: 쪼막집 생태 단열 3차 테스트" class="w-full bg-slate-50 border border-slate-300 px-3 py-2.5 rounded-xl font-medium focus:outline-none" />
+              </div>
+
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">상세 내용</label>
+                <textarea id="quick-note-desc" rows="3" placeholder="노트 본문 내용을 입력하세요..." class="w-full bg-slate-50 border border-slate-300 px-3 py-2.5 rounded-xl font-medium focus:outline-none resize-none"></textarea>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button onclick="QuickModal.saveNote()" class="py-3 bg-purple-700 text-white font-black rounded-xl shadow cursor-pointer">노트 등록 완료</button>
+                <button onclick="QuickModal.setStep('main')" class="py-3 bg-slate-100 text-slate-700 border border-slate-300 font-bold rounded-xl cursor-pointer">돌아가기</button>
+              </div>
+            </div>
+            <div class="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-2.5 flex items-center justify-between text-xs mt-1">
+              <div class="flex items-center gap-1.5 text-emerald-800 font-bold">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                <span>로그인 유지 중 (${loginId})</span>
+              </div>
+              <button onclick="AuthModule.logout()" class="text-[11px] font-bold text-slate-700 bg-white border border-slate-300 px-2.5 py-1 rounded-xl shadow-sm cursor-pointer">로그아웃</button>
+            </div>
+          `;
+        }
+      }
+    };
+
+    let state = {
+      isSecret: false,
+      publicTab: 'home',
+      secretSite: 'GROUP',
+      ceoTab: 'home',
+      ifTab: 'ledger',
+      noteTab: 'home',
+      groupTab: 'dreamteam',
+      aaaTab: 'home',
+      currentMonth: 9,
+      notes: [
+        { title: '[기획] 쪼막집 Z1 미니멀 설계 2차 고도화', desc: '자연 온도 조절 및 맥문동 지붕 시공 계획 점검', date: '09.25' }
+      ],
+      ledgerItems: [
+        { date: '09.01', desc: '초기 자산 예치', income: 15000000, expense: 0 },
+        { date: '09.15', desc: '생태 건축 자재 구입', income: 0, expense: 5045000 }
+      ],
+      messages: [
+        { sender: '회장님', text: '버전 0.3.05 최상위 마스터 원장 적용 완료!', time: '07:02' },
+        { sender: '박상상', text: '기획 총괄 대기 중입니다.', time: '07:02' },
+        { sender: '김프로', text: '테크 리드 대기! 0.3.05 락.', time: '07:02' },
+        { sender: '마드리', text: '모마드 라이프 생태 건축 점검 끝!', time: '07:02' },
+        { sender: '서비서', text: '일정 및 문서 서포트 세팅 완료.', time: '07:02' },
+        { sender: '이프', text: '!F 재무 파이프라인 연동 완료.', time: '07:02' },
+        { sender: '페포', text: '페인포인트 팩트 검수 모니터링 중!', time: '07:02' }
+      ]
+    };
+
+    function changeMonth(diff) {
+      state.currentMonth += diff;
+      if (state.currentMonth < 1) state.currentMonth = 12;
+      if (state.currentMonth > 12) state.currentMonth = 1;
+      render();
+    }
+
+    function goHome() {
+      state.isSecret = false;
+      state.publicTab = 'home';
+      render();
+    }
+
+    function sendChatMessage() {
+      let inputEl = document.getElementById('chat-input');
+      let val = inputEl.value.trim();
+      if (val) {
+        state.messages.push({ sender: '회장님', text: val, time: '방금 전' });
+        inputEl.value = '';
+        render();
+      }
+    }
+
+    const fpBannerList = [
+      { id: 'ilsaeng', name: '일생', desc: '개인의 삶과 여정을 아우르는 80페이지 유한성 아카이브', tag: '#자서전', img: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=800&h=450&q=80' },
+      { id: 'momadlife', name: '모마드라이프', desc: '2m×3m Z1 미니멀 설계 생태 건축 라이프스타일', tag: '#주거주권', img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&h=450&q=80' },
+      { id: 'ggllim', name: 'GGLLIM', desc: '공간형 감성 큐레이션 스토리텔링 플랫폼', tag: '#취향찾기', img: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&h=450&q=80' },
+      { id: 'suzoc', name: '수족', desc: '손발처럼 부리는 AI 스마트 제어 코어', tag: '#AI수족', img: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&h=450&q=80' },
+      { id: 'painpoint', name: '페인포인트', desc: '고통 불만 팩트 데이터 드라이한 아카이브', tag: '#고통불만', img: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&h=450&q=80' },
+      { id: 'voollo', name: '블로 (VOOLLO)', desc: '노동의 굴레를 벗어나 불로소득 실현형 창업 지원', tag: '#불로소득', img: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&h=450&q=80' },
+      { id: 'salkka', name: '살까', desc: '소비 및 구매 의사결정을 명쾌하게 돕는 인터랙티브', tag: '#쇼핑검색', img: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=800&h=450&q=80' },
+      { id: 'nemocity', name: '네모시티', desc: '공간과 현실을 잇는 디지털 메타버스 관제', tag: '#신세계', img: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&h=450&q=80' }
+    ];
+
+    function render() {
+      let app = document.getElementById('independent-app');
+      let navBar = document.getElementById('bottom-nav-bar');
+
+      let activeAlarmHTML = `
+        <div onclick="state.secretSite='GROUP'; state.groupTab='dreamteam'; state.isSecret=true; render();" class="absolute top-1 right-2 z-35 bg-purple-700 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 cursor-pointer animate-bounce">
+          <span style="font-size: 16px;">🔔</span> <span>6</span>
+        </div>
+      `;
+
+      if (!state.isSecret) {
+        app.innerHTML = `
+          <header class="universe-header">
+            ${activeAlarmHTML}
+            <span class="universe-slogan">상상을 현실로 보여주는</span>
+            <h1 onclick="goHome()" class="universe-logo">상상쇼</h1>
+            <div class="universe-version">0.3.05</div>
+          </header>
+
+          <div class="universe-gnb-wrapper">
+            <nav class="universe-gnb text-slate-800">
+              <button onclick="state.publicTab='home'; render();" class="${state.publicTab === 'home' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">홈</button>
+              <button onclick="state.publicTab='about'; render();" class="${state.publicTab === 'about' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">상상쇼?</button>
+              <button onclick="state.publicTab='world'; render();" class="${state.publicTab === 'world' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">세계관</button>
+              <button onclick="state.publicTab='universe'; render();" class="${state.publicTab === 'universe' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">유니버스</button>
+              <button onclick="state.publicTab='ecosystem'; render();" class="${state.publicTab === 'ecosystem' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">생태계</button>
+            </nav>
+          </div>
+
+          <main class="w-full flex-1 space-y-2 box-border pt-0">
+            ${state.publicTab === 'home' ? `
+              <div class="space-y-3">
+                <div class="text-center pb-0.5">
+                  <h3 class="text-xs font-black text-slate-800 tracking-tight uppercase">상상쇼 생태계 8대 FP 공식 인스타 배너 아카이브</h3>
+                </div>
+                <div class="space-y-2.5">
+                  ${fpBannerList.map(item => `
+                    <div onclick="alert('${item.name} 상세 관제 뷰 진입')" class="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 hover:border-slate-400 transition-all cursor-pointer">
+                      <div class="w-full relative bg-slate-900" style="aspect-ratio: 16/9;">
+                        <img src="${item.img}" class="w-full h-full object-cover opacity-95" />
+                        <span class="absolute top-2 right-2 text-[10px] font-bold text-purple-700 bg-white/90 px-2 py-0.5 rounded shadow">${item.tag}</span>
+                        <div class="absolute bottom-2.5 left-3 bg-black/60 text-white text-xs font-black px-2.5 py-1 rounded-lg backdrop-blur-sm">
+                          ${item.name} 배너 관제
+                        </div>
+                      </div>
+                      <div class="p-3 text-left space-y-0.5">
+                        <h4 class="text-xs font-black text-slate-900">${item.name}</h4>
+                        <p class="text-[11px] text-slate-600 font-semibold leading-tight">${item.desc}</p>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : `
+              <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm text-center py-12">
+                <h3 class="text-sm font-black text-slate-900">✨ ${state.publicTab.toUpperCase()} 안내 페이지</h3>
+              </div>
+            `}
+          </main>
+        `;
+
+        navBar.innerHTML = `
+          <button onclick="state.isSecret=false; state.publicTab='home'; render();" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 4px 0; background: none; border: none; cursor: pointer;" class="${state.publicTab === 'home' ? 'text-slate-900 font-black' : 'text-slate-400'}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span style="font-size: 10px; font-weight: 700; margin-top: 3px; white-space: nowrap;">홈</span>
+          </button>
+          <button onclick="alert('안내지도 모듈 진입');" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 4px 0; background: none; border: none; cursor: pointer;" class="text-slate-400">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            <span style="font-size: 10px; font-weight: 700; margin-top: 3px; white-space: nowrap;">안내지도</span>
+          </button>
+          <button onclick="alert('추천코스 모듈 진입');" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 4px 0; background: none; border: none; cursor: pointer;" class="text-slate-400">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 8-4 8 4"/><path d="m18 10 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8l2-2"/><rect width="6" height="6" x="9" y="14"/></svg>
+            <span style="font-size: 10px; font-weight: 700; margin-top: 3px; white-space: nowrap;">추천코스</span>
+          </button>
+          <button onclick="alert('시너지 모듈 진입');" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 4px 0; background: none; border: none; cursor: pointer;" class="text-slate-400">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span style="font-size: 10px; font-weight: 700; margin-top: 3px; white-space: nowrap;">시너지</span>
+          </button>
+          <button onclick="alert('나의 상상 모듈 진입');" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 4px 0; background: none; border: none; cursor: pointer;" class="text-slate-400">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span style="font-size: 10px; font-weight: 700; margin-top: 3px; white-space: nowrap;">나의 상상</span>
+          </button>
+        `;
+
+      } else {
+        let siteLogo = state.secretSite;
+        let displayLogoText = siteLogo;
+        if (siteLogo === 'NOTE') displayLogoText = '상상노트';
+        if (siteLogo === 'GROUP') displayLogoText = '상상쇼그룹';
+
+        let prevMonthVal = state.currentMonth === 1 ? 12 : state.currentMonth - 1;
+        let nextMonthVal = state.currentMonth === 12 ? 1 : state.currentMonth + 1;
+        let netTotal = state.ledgerItems.reduce((acc, cur) => acc + (cur.income - cur.expense), 0);
+
+        app.innerHTML = `
+          <!-- 헤더 규격 적용 -->
+          <header class="universe-header" style="position: relative; margin-bottom: 5px;">
+            ${activeAlarmHTML}
+            <span class="universe-slogan">상상을 현실로 보여주는</span>
+            <h1 onclick="goHome()" class="universe-logo">${displayLogoText}</h1>
+            <div class="universe-version" style="margin-bottom: 5px;">0.3.05</div>
+          </header>
+
+          <div class="universe-gnb-wrapper">
+            <nav class="universe-gnb text-slate-800 flex items-center justify-around">
+              ${state.secretSite === 'CEO' ? `
+                <button onclick="state.secretSite='CEO'; render();" class="text-slate-900 font-black border-b-2 border-slate-900 pb-0.5">CEO</button>
+                <button onclick="state.secretSite='!F'; state.ifTab='home'; render();" class="text-slate-500 font-bold">!F</button>
+                <button onclick="state.secretSite='NOTE'; state.noteTab='home'; render();" class="text-slate-500 font-bold">상상노트</button>
+                <button onclick="state.secretSite='GROUP'; state.groupTab='dreamteam'; render();" class="text-slate-500 font-bold">상상쇼그룹</button>
+                <button onclick="state.secretSite='AAA'; state.aaaTab='home'; render();" class="text-slate-500 font-bold">AAA</button>
+              ` : state.secretSite === '!F' ? `
+                <button onclick="state.ifTab='home'; render();" class="${state.ifTab === 'home' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">홈</button>
+                <button onclick="state.ifTab='money'; render();" class="${state.ifTab === 'money' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">머니시스템</button>
+                <button onclick="state.ifTab='ledger'; render();" class="${state.ifTab === 'ledger' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">금전출납부</button>
+              ` : state.secretSite === 'NOTE' ? `
+                <button onclick="state.noteTab='home'; render();" class="${state.noteTab === 'home' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">홈</button>
+                <button onclick="state.noteTab='roadmap'; render();" class="${state.noteTab === 'roadmap' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">로드맵</button>
+                <button onclick="state.noteTab='schedule'; render();" class="${state.noteTab === 'schedule' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">스케줄</button>
+              ` : state.secretSite === 'GROUP' ? `
+                <button onclick="state.groupTab='home'; render();" class="${state.groupTab === 'home' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">홈</button>
+                <button onclick="state.groupTab='progress'; render();" class="${state.groupTab === 'progress' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">진행상황</button>
+                <button onclick="state.groupTab='dreamteam'; render();" class="${state.groupTab === 'dreamteam' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">드림팀</button>
+              ` : `
+                <button onclick="state.aaaTab='home'; render();" class="${state.aaaTab === 'home' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">홈</button>
+                <button onclick="state.aaaTab='principle'; render();" class="${state.aaaTab === 'principle' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">원칙</button>
+                <button onclick="state.aaaTab='plan'; render();" class="${state.aaaTab === 'plan' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">플랜</button>
+                <button onclick="state.aaaTab='fractal'; render();" class="${state.aaaTab === 'fractal' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">프렉탈</button>
+                <button onclick="state.aaaTab='live'; render();" class="${state.aaaTab === 'live' ? 'text-slate-900 font-black border-b-2 border-slate-900 pb-0.5' : 'text-slate-500 font-bold'}">라이브</button>
+              `}
+            </nav>
+          </div>
+
+          <main class="w-full flex-1 space-y-1 box-border pt-0">
+            ${state.secretSite === 'CEO' ? `
+              <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-sm text-left">
+                <div class="border-b border-slate-100 pb-1.5 flex items-center justify-between">
+                  <h3 class="text-xs font-black text-slate-900">드림팀 실시간 브리핑</h3>
+                  <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">로그인 유지 중</span>
+                </div>
+                <div class="max-h-[140px] overflow-y-scroll custom-scroll space-y-1.5 pr-1">
+                  ${state.messages.map(b => `
+                    <div class="flex items-start text-xs leading-snug border-b border-slate-50 pb-1.5 last:border-0 last:pb-0">
+                      <span class="text-slate-400 shrink-0 w-[54px] text-left" style="font-size:11px;">${b.sender}</span>
+                      <span class="text-slate-400 shrink-0 w-[44px] text-left" style="font-size:11px;">${b.time}</span>
+                      <span class="text-slate-800 flex-1 pl-1 text-left" style="font-size:13px; font-weight:400; word-break: break-all;">${b.text}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : state.secretSite === '!F' ? `
+              ${state.ifTab === 'home' ? `
+                <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3 text-left">
+                  <h3 class="text-sm font-black text-purple-700">💎 !F 독립 사이트 홈</h3>
+                  <p class="text-xs text-slate-600">재무 및 자산 파이프라인 관제 코어 메인 화면입니다.</p>
+                </div>
+              ` : state.ifTab === 'money' ? `
+                <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3 text-left">
+                  <h3 class="text-sm font-black text-purple-700">💎 !F 머니시스템 관제탑</h3>
+                  <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                    <p class="text-xs font-black text-slate-900">티끌 모아 1,000억 원 자산 플랜</p>
+                    <p class="text-[11px] text-slate-600">불로소득 창출형 창업 및 쪼막집 생태계 자산화 구조 연동 완료.</p>
+                  </div>
+                </div>
+              ` : `
+                <div class="bg-white space-y-1 text-left">
+                  
+                  <!-- 월 합계 5분할 핀셋 구조 -->
+                  <div class="bg-white rounded-xl py-0.5 px-1 text-center">
+                    <div class="grid items-center" style="grid-template-columns: 48px 1fr 1.8fr 1fr 48px; gap: 2px;">
+                      <div></div>
+                      <button onclick="changeMonth(-1)" class="text-slate-500 font-bold cursor-pointer text-center" style="font-size: 13px;">
+                        <span class="block" style="margin-bottom: 3px;">◀ ${prevMonthVal}월</span>
+                        <span class="font-bold text-slate-400 block" style="font-size: 14px; line-height: 1;">0</span>
+                      </button>
+                      <div class="text-center cursor-pointer">
+                        <span class="font-black text-slate-900 block" style="font-size: 15px; line-height: 1; margin-bottom: 3px;">${state.currentMonth}월</span>
+                        <span class="font-bold text-rose-600 block truncate" style="font-size: 20px; line-height: 1;">${netTotal.toLocaleString()}</span>
+                      </div>
+                      <button onclick="changeMonth(1)" class="text-slate-500 font-bold cursor-pointer text-center" style="font-size: 13px;">
+                        <span class="block" style="margin-bottom: 3px;">${nextMonthVal}월 ▶</span>
+                        <span class="font-bold text-slate-400 block" style="font-size: 14px; line-height: 1;">0</span>
+                      </button>
+                      <div class="text-right flex justify-end">
+                        <select class="bg-slate-100 border border-slate-200 px-0.5 py-1 rounded-lg font-bold text-[10px] text-slate-700 cursor-pointer text-center" style="width: 48px; letter-spacing: -0.5px;">
+                          <option>2026</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 스크롤 박스 (max-h-[520px] 확장 적용) -->
+                  <div class="overflow-hidden bg-white" style="font-size: 11px;">
+                    <div class="max-h-[520px] overflow-y-scroll custom-scroll divide-y divide-slate-100 relative">
+                      
+                      <!-- 헤더 행 -->
+                      <div class="grid grid-cols-[30px_1fr_75px_75px_80px] bg-slate-100 font-black text-slate-700 px-1.5 py-1 border-b border-slate-200 sticky top-0 z-30 items-center text-[11px]">
+                        <span class="text-center">날짜</span>
+                        <span class="text-center">적요</span>
+                        <span class="text-center">수입</span>
+                        <span class="text-center">지출</span>
+                        <span class="text-center">합계</span>
+                      </div>
+
+                      <!-- 해당 월 말일까지 풀스펙 동적 스크롤 생성 -->
+                      ${(() => {
+                        let lastDay = new Date(2026, state.currentMonth, 0).getDate();
+                        let html = '';
+                        let weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+                        for (let d = 1; d <= lastDay; d++) {
+                          let dayOfWeek = new Date(2026, state.currentMonth - 1, d).getDay();
+                          let dName = weekdays[dayOfWeek];
+                          let colorClass = 'text-slate-700 font-bold';
+                          if (dName === '토') colorClass = 'text-blue-600 font-bold';
+                          if (dName === '일') colorClass = 'text-rose-600 font-bold';
+                          
+                          let dayStr = `${String(state.currentMonth).padStart(2,'0')}.${String(d).padStart(2,'0')}`;
+                          let matched = state.ledgerItems.find(item => item.date === dayStr);
+                          let desc = matched ? matched.desc : '';
+                          let inc = matched && matched.income > 0 ? matched.income.toLocaleString() : '';
+                          let exp = matched && matched.expense > 0 ? matched.expense.toLocaleString() : '';
+                          let totVal = matched ? (matched.income - matched.expense) : 0;
+                          let tot = matched ? totVal.toLocaleString() : '';
+                          let totColor = totVal > 0 ? 'text-rose-600 font-bold' : (totVal < 0 ? 'text-blue-600 font-bold' : 'text-slate-900');
+
+                          html += `
+                            <div class="grid grid-cols-[30px_1fr_75px_75px_80px] px-1.5 py-1 items-start text-slate-700 bg-white text-[11px]" style="min-height: 22px;">
+                              <span class="text-center ${colorClass} pt-0.5">${dName}${d}</span>
+                              <span class="text-left pl-0.5 text-slate-600 font-medium truncate pt-0.5">${desc}</span>
+                              <span class="text-right pr-2 text-slate-600 pt-0.5">${inc}</span>
+                              <span class="text-right pr-2 text-slate-600 pt-0.5">${exp}</span>
+                              <span class="text-right pr-2 ${totColor} pt-0.5">${tot}</span>
+                            </div>
+                          `;
+                        }
+                        return html;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              `}
+            ` : state.secretSite === 'NOTE' ? `
+              <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3 text-left">
+                <div class="flex justify-between items-center border-b pb-2">
+                  <h3 class="text-sm font-black text-slate-900">📝 상상노트 아카이브</h3>
+                  <button onclick="QuickModal.open()" class="bg-purple-700 text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow cursor-pointer">+ 새 글 쓰기</button>
+                </div>
+                <div class="space-y-2">
+                  ${state.notes.map(n => `
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                      <div class="flex justify-between items-center text-[10px] text-slate-400 font-bold">
+                        <span>상상노트 공식</span>
+                        <span>${n.date}</span>
+                      </div>
+                      <h4 class="text-xs font-black text-slate-900">${n.title}</h4>
+                      <p class="text-[11px] text-slate-600">${n.desc}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : state.secretSite === 'GROUP' ? `
+              ${state.groupTab === 'home' ? `
+                <div class="space-y-3 text-left">
+                  <!-- 상상쇼 그룹 헤더 카드 -->
+                  <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-1.5">
+                    <span class="text-[10px] font-black text-purple-700 bg-purple-50 px-2 py-0.5 rounded">상상쇼그룹 독립 관제</span>
+                    <h3 class="text-sm font-black text-slate-900">그룹 5개년 및 12개월 예상 수익 경영 관제탑</h3>
+                    <p class="text-[11px] text-slate-600 font-medium">마들의 톤앤매너와 공통 CSS 규격을 반영한 예상 수익 시뮬레이션 표 2개입니다.</p>
+                  </div>
+
+                  <!-- 1. 5개년 예상 수익표 -->
+                  <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm space-y-2">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-1.5">
+                      <h4 class="text-xs font-black text-slate-900 flex items-center gap-1">
+                        <span>📊</span> 5개년 예상 수익표 (2026 ~ 2030)
+                      </h4>
+                      <span class="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded">UNIT: KRW</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-[11px] text-left border-collapse">
+                        <thead>
+                          <tr class="bg-slate-100 text-slate-700 font-black">
+                            <th class="p-1.5 text-center border-b border-slate-200">연도</th>
+                            <th class="p-1.5 text-right border-b border-slate-200">총 수입</th>
+                            <th class="p-1.5 text-right border-b border-slate-200">총 지출</th>
+                            <th class="p-1.5 text-right border-b border-slate-200">순이익</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
+                          <tr>
+                            <td class="p-1.5 text-center font-bold text-purple-700">2026년</td>
+                            <td class="p-1.5 text-right">150,000,000</td>
+                            <td class="p-1.5 text-right text-slate-500">50,000,000</td>
+                            <td class="p-1.5 text-right font-black text-rose-600">+100,000,000</td>
+                          </tr>
+                          <tr>
+                            <td class="p-1.5 text-center font-bold text-purple-700">2027년</td>
+                            <td class="p-1.5 text-right">500,000,000</td>
+                            <td class="p-1.5 text-right text-slate-500">150,000,000</td>
+                            <td class="p-1.5 text-right font-black text-rose-600">+350,000,000</td>
+                          </tr>
+                          <tr>
+                            <td class="p-1.5 text-center font-bold text-purple-700">2028년</td>
+                            <td class="p-1.5 text-right">1,500,000,000</td>
+                            <td class="p-1.5 text-right text-slate-500">400,000,000</td>
+                            <td class="p-1.5 text-right font-black text-rose-600">+1,100,000,000</td>
+                          </tr>
+                          <tr>
+                            <td class="p-1.5 text-center font-bold text-purple-700">2029년</td>
+                            <td class="p-1.5 text-right">5,000,000,000</td>
+                            <td class="p-1.5 text-right text-slate-500">1,200,000,000</td>
+                            <td class="p-1.5 text-right font-black text-rose-600">+3,800,000,000</td>
+                          </tr>
+                          <tr>
+                            <td class="p-1.5 text-center font-bold text-purple-700">2030년</td>
+                            <td class="p-1.5 text-right">15,000,000,000</td>
+                            <td class="p-1.5 text-right text-slate-500">3,000,000,000</td>
+                            <td class="p-1.5 text-right font-black text-rose-600">+12,000,000,000</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <!-- 2. 12개월 월별 예상 수익표 -->
+                  <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm space-y-2">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-1.5">
+                      <h4 class="text-xs font-black text-slate-900 flex items-center gap-1">
+                        <span>📈</span> 2026년 12개월 월별 예상 수익표
+                      </h4>
+                      <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">12 MONTHS</span>
+                    </div>
+                    <div class="max-h-[220px] overflow-y-scroll custom-scroll">
+                      <table class="w-full text-[11px] text-left border-collapse">
+                        <thead>
+                          <tr class="bg-slate-100 text-slate-700 font-black sticky top-0 z-20">
+                            <th class="p-1.5 text-center border-b border-slate-200">월</th>
+                            <th class="p-1.5 text-right border-b border-slate-200">예상 수입</th>
+                            <th class="p-1.5 text-right border-b border-slate-200">예상 지출</th>
+                            <th class="p-1.5 text-right border-b border-slate-200">월 순이익</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
+                          ${[
+                            {m: '1월', inc: 5000000, exp: 3000000},
+                            {m: '2월', inc: 7000000, exp: 4000000},
+                            {m: '3월', inc: 10000000, exp: 5000000},
+                            {m: '4월', inc: 12000000, exp: 4500000},
+                            {m: '5월', inc: 15000000, exp: 5000000},
+                            {m: '6월', inc: 18000000, exp: 6000000},
+                            {m: '7월', inc: 20000000, exp: 7000000},
+                            {m: '8월', inc: 25000000, exp: 8000000},
+                            {m: '9월', inc: 30000000, exp: 9000000},
+                            {m: '10월', inc: 35000000, exp: 10000000},
+                            {m: '11월', inc: 40000000, exp: 12000000},
+                            {m: '12월', inc: 50000000, exp: 15000000},
+                          ].map(row => {
+                            let net = row.inc - row.exp;
+                            return `
+                              <tr>
+                                <td class="p-1.5 text-center font-bold text-slate-700">${row.m}</td>
+                                <td class="p-1.5 text-right text-slate-600">${row.inc.toLocaleString()}</td>
+                                <td class="p-1.5 text-right text-slate-400">${row.exp.toLocaleString()}</td>
+                                <td class="p-1.5 text-right font-black text-rose-600">+${net.toLocaleString()}</td>
+                              </tr>
+                            `;
+                          }).join('')}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ` : state.groupTab === 'dreamteam' ? `
+                <div class="space-y-2 text-left">
+                  <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm space-y-2">
+                    <div class="flex justify-between items-center border-b pb-1.5">
+                      <div class="flex items-center gap-1.5">
+                        <div class="w-6 h-6 bg-purple-700 text-white rounded-lg flex items-center justify-center font-black text-xs shadow">🔥</div>
+                        <span class="text-xs font-black text-slate-900">6인방 드림팀 긴급 핫라인</span>
+                      </div>
+                      <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded animate-pulse">LIVE ON</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-1.5 pt-1">
+                      <div class="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
+                        <p class="text-[11px] font-black text-purple-700">박상상</p>
+                        <p class="text-[9px] font-bold text-slate-500">기획 총괄</p>
+                      </div>
+                      <div class="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
+                        <p class="text-[11px] font-black text-purple-700">김프로</p>
+                        <p class="text-[9px] font-bold text-slate-500">테크 리드</p>
+                      </div>
+                      <div class="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
+                        <p class="text-[11px] font-black text-purple-700">마드리</p>
+                        <p class="text-[9px] font-bold text-slate-500">생태 건축</p>
+                      </div>
+                      <div class="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
+                        <p class="text-[11px] font-black text-purple-700">서비서</p>
+                        <p class="text-[9px] font-bold text-slate-500">일정·문서</p>
+                      </div>
+                      <div class="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
+                        <p class="text-[11px] font-black text-purple-700">이프</p>
+                        <p class="text-[9px] font-bold text-slate-500">재무 관제</p>
+                      </div>
+                      <div class="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
+                        <p class="text-[11px] font-black text-purple-700">페포</p>
+                        <p class="text-[9px] font-bold text-slate-500">팩트·오류</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm space-y-2.5">
+                    <div class="flex justify-between items-center border-b pb-1.5">
+                      <span class="text-xs font-black text-slate-900">💬 실시간 음성 대화 및 브리핑 로그</span>
+                      <button onclick="alert('🎙️ 6인방 음성 마이크 방송이 활성화되었습니다!')" class="bg-rose-600 text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow cursor-pointer">마이크 ON</button>
+                    </div>
+
+                    <div class="max-h-[130px] overflow-y-scroll custom-scroll space-y-1.5 text-xs pr-1">
+                      ${state.messages.map(m => `
+                        <div class="p-2 bg-slate-50 rounded-xl border border-slate-100 flex flex-col space-y-0.5">
+                          <div class="flex justify-between text-[10px] font-bold text-slate-500">
+                            <span class="text-purple-700">${m.sender}</span>
+                            <span>${m.time}</span>
+                          </div>
+                          <p class="text-slate-900 font-medium">${m.text}</p>
+                        </div>
+                      `).join('')}
+                    </div>
+
+                    <div class="flex items-center gap-1.5 pt-1">
+                      <input id="chat-input" type="text" placeholder="6인방 드림팀에 긴급 메시지 입력..." class="flex-1 bg-slate-50 border border-slate-300 px-3 py-2 rounded-xl text-xs font-medium focus:outline-none" />
+                      <button onclick="sendChatMessage()" class="bg-purple-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow cursor-pointer">전송</button>
+                    </div>
+                  </div>
+                </div>
+              ` : `
+                <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3 text-left">
+                  <h3 class="text-sm font-black text-slate-900">👥 상상쇼그룹 ${state.groupTab.toUpperCase()} 뷰</h3>
+                  <p class="text-xs text-slate-600">상상쇼그룹 독립 사이트 내 ${state.groupTab} 영역입니다.</p>
+                </div>
+              `}
+            ` : `
+              <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3 text-left">
+                <h3 class="text-sm font-black text-slate-900">⚡ AAA 독립 사이트 (${state.aaaTab.toUpperCase()}) 뷰</h3>
+                <p class="text-xs text-slate-600">AAA 핵심 아키텍처 및 실시간 라이브 관제 공간입니다.</p>
+              </div>
+            `}
+          </main>
+        `;
+
+        navBar.innerHTML = `
+          <button onclick="state.isSecret=true; state.secretSite='CEO'; render();" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 4px 0; background: none; border: none; cursor: pointer;" class="${state.secretSite === 'CEO' ? 'text-slate-900 font-black' : 'text-slate-400'}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span style="font-size: 10px; font-weight: 700; margin-top: 3px; white-space: nowrap;">홈</span>
+          </button>
+          <button onclick="state.isSecret=true; state.secretSite='!F'; state.ifTab='money'; render();" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 4px 0; background: none; border: none; cursor: pointer;" class="${state.secretSite === '!F' && state.ifTab === 'money' ? 'text-slate-900 font-black' : 'text-slate-400'}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg>
+            <span style="font-size: 10px; font-weight: 700; margin-top: 3px; white-space: nowrap;">머니시스템</span>
+          </button>
+          <div style="flex: 1; display: flex; justify-content: center; align-items: center;">
+            <button onclick="QuickModal.open()" style="width: 36px; height: 36px; border-radius: 50%; background-color: #7c3aed; color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); border: 2px solid white; font-weight: 900; font-size: 18px; cursor: pointer;">
+              +
+            </button>
+          </div>
+          <button onclick="state.isSecret=true; state.secretSite='!F'; state.ifTab='ledger'; render();" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 4px 0; background: none; border: none; cursor: pointer;" class="${state.secretSite === '!F' && state.ifTab === 'ledger' ? 'text-slate-900 font-black' : 'text-slate-400'}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+            <span style="font-size: 10px; font-weight: 700; margin-top: 3px; white-space: nowrap;">금전출납부</span>
+          </button>
+          <button onclick="state.isSecret=true; state.secretSite='GROUP'; state.groupTab='dreamteam'; render();" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 4px 0; background: none; border: none; cursor: pointer;" class="${state.secretSite === 'GROUP' && state.groupTab === 'dreamteam' ? 'text-slate-900 font-black' : 'text-slate-400'}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 20h14"/></svg>
+            <span style="font-size: 10px; font-weight: 700; margin-top: 3px; white-space: nowrap;">드림팀</span>
+          </button>
+        `;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      render();
+    });
+  </script>
+</body>
+</html>
